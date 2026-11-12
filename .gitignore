@@ -1,3 +1,21 @@
+# Datos (se descargan de Zenodo, ver README)
+data/
+msl-images/
+*.zip
+
+# Artículo (copyright de la revista)
+*.pdf
+
+# Checkpoints y pesos
+*.pt
+*.pth
+*.ckpt
+
+# Configuración local de Claude
+CLAUDE.md
+.claude/
+
+# ---- Plantilla Python de GitHub ----
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

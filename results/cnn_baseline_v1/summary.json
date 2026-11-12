@@ -1,0 +1,62 @@
+{
+  "run": "cnn_baseline_v1",
+  "model": "MarsCNN",
+  "params_M": 2.36,
+  "gflops": 5.64,
+  "best_epoch": 72,
+  "best_val_loss": 0.2736374560873307,
+  "epochs_run": 92,
+  "train_time_s": 407.90586808899934,
+  "val_acc": 0.8955223880597015,
+  "val_precision_macro": 0.8987100597814883,
+  "val_recall_macro": 0.8925705568268498,
+  "val_f1_macro": 0.8946642710383458,
+  "train_acc_noaug": 0.9585121602288984,
+  "acc_gap": 0.06298977216919688,
+  "latency_ms_mean": 1.3873689603805541,
+  "latency_ms_p95": 2.088059163093566,
+  "mean_epoch_s": 4.418431289869461,
+  "mean_train_img_per_s": 169.86425984688708,
+  "peak_train_mem_MB": 693.06982421875,
+  "split": "split_v1.csv",
+  "cfg": {
+    "seed": 42,
+    "img_size": 224,
+    "batch_size": 8,
+    "lr": 0.001,
+    "weight_decay": 0.0001,
+    "max_epochs": 200,
+    "es_patience": 20,
+    "plateau_factor": 0.5,
+    "plateau_patience": 5,
+    "brightness": 0.3,
+    "contrast": 0.3,
+    "crop_scale": [
+      0.7,
+      1.0
+    ],
+    "noise_std": 0.03,
+    "widths": [
+      32,
+      64,
+      128,
+      256,
+      256
+    ],
+    "dropout": 0.3,
+    "num_workers": 0,
+    "use_amp": false
+  },
+  "env": {
+    "python": "3.12.3",
+    "torch": "2.15.0+cu132",
+    "torchvision": "0.29.2+cu132",
+    "cuda": "13.2",
+    "cudnn": 92600,
+    "gpu": "NVIDIA GeForce RTX 3060",
+    "vram_GB": 12.0,
+    "compute_capability": "8.6",
+    "kernel": "6.18.40.1-microsoft-standard-WSL2",
+    "cpu_threads": 20
+  }
+}
