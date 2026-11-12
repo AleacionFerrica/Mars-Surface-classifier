@@ -1,9 +1,9 @@
 # MarsProject: clasificación de escenas marcianas con pocas muestras (SE-ResNet-MTL)
 
-Proyecto personal de visión por computador sobre imágenes del rover Curiosity (MSL). El objetivo es **replicar en local la metodología del artículo**:
+Proyecto personal de visión por computador sobre imágenes del rover Curiosity (MSL). El objetivo es **replicar en local y con mi propio dispositivo la metodología del artículo**:
 
 > He, Y.; Shen, N.; Zhang, X.; Wu, Z.; Li, J.; Hou, D. *Research on Few-Shot Mars Rover Onboard Surface Scene Classification Based on SE-ResNet-MTL*. Remote Sensing 2026, 18, 2319. https://doi.org/10.3390/rs18142319
-> (PDF en `remotesensing-18-02319.pdf`; los autores publicaron código y dataset en Zenodo: https://zenodo.org/records/20828875)
+>; los autores publicaron código y dataset en Zenodo: https://zenodo.org/records/20828875)
 
 > **Estado:** fase inicial. El dataset del artículo ya está en `data/`. Todavía no hay código: los modelos se implementarán desde cero, sin reutilizar el código publicado por los autores.
 
@@ -20,26 +20,20 @@ Proyecto personal de visión por computador sobre imágenes del rover Curiosity 
 
 ### Entorno: WSL2
 
-En Windows nativo hay limitaciones con CUDA (y con `torch.compile` y otras herramientas), así que **todo lo que use la GPU se ejecuta en WSL2 (Ubuntu)**. WSL2 ya ve la RTX 3060 con el driver de Windows; no hay que instalar drivers NVIDIA dentro de Ubuntu.
+En Windows nativo hay limitaciones con CUDA (y con `torch.compile` y otras herramientas), así que **todo lo que use la GPU se ejecuta en WSL2 (Ubuntu)**. 
 
 ```bash
-# Dentro de WSL (Ubuntu). El repo está en /mnt/c/Users/Jorge/MarsProject
-sudo apt install python3-venv          # si hace falta
+# Dentro de WSL (Ubuntu). 
+sudo apt install python3-venv        
 python3 -m venv ~/venvs/mars
 source ~/venvs/mars/bin/activate
-pip install torch torchvision          # en Linux la rueda por defecto ya incluye CUDA
+pip install torch torchvision          
 pip install numpy pandas matplotlib seaborn pillow scikit-learn imagehash jupyter ipykernel
 python -m ipykernel install --user --name mars --display-name "Python (mars, WSL)"
 python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
 ```
 
-- **Notebook:** abre la carpeta en VS Code con la extensión *WSL* (`code .` desde Ubuntu) y elige el kernel `Python (mars, WSL)`. También puedes lanzar `jupyter lab` desde WSL.
-- **Rendimiento de E/S:** leer de `/mnt/c` es más lento que leer del sistema de archivos de Linux. Con 1000 imágenes no importa; si más adelante pesa, copia `data/` a `~/` o cachea las imágenes en memoria.
-- **Rutas:** usa siempre rutas relativas a la raíz del repo, nunca `C:\...`.
-- **No instales drivers de NVIDIA ni paquetes `libnvidia-compute-*` con apt dentro de WSL.** Las librerías del driver ya llegan desde Windows (`/usr/lib/wsl/lib`), y las de torch vienen en las ruedas de pip. Si mezclas el driver de Linux con el de WSL, `torch.cuda.is_available()` acaba en *Segmentation fault*.
-- **Git:** usa git siempre desde el mismo lado (Windows o WSL) para no tener problemas con los finales de línea.
-
-La 3060 tiene más VRAM que la GPU del artículo, así que la configuración original (batch 8, ResNet50 a 224×224) cabe sin problemas. Lo que más memoria consume es MAML: conserva el grafo completo del bucle interno a través de ResNet50 y procesa en cada tarea 5×(K+15) imágenes, es decir, 80 en 1-shot y 100 en 5-shot. Si no cabe, se puede usar `expandable_segments`, procesar las tareas del meta-batch de una en una acumulando gradientes, o recurrir a gradient checkpointing.
+La 3060 tiene más VRAM que la GPU del artículo, la configuración original (batch 8, ResNet50 a 224×224). Lo que más memoria consume es MAML: conserva el grafo completo del bucle interno a través de ResNet50 y procesa en cada tarea 5×(K+15) imágenes, es decir, 80 en 1-shot y 100 en 5-shot.
 
 ---
 
@@ -62,9 +56,9 @@ Es el dataset *MSL Curiosity labeled data set* de Stanboli & Wagstaff (DOI [10.5
 
 Los ficheros de split tienen el formato `calibrated/<archivo>.JPG <id_clase>`. Los cuatro primeros dígitos del nombre de archivo son el sol.
 
-### 2.2 Dataset del artículo (no coincide con el local)
+### 2.2 Dataset del artículo
 
-El artículo **no** usa las 25 clases anteriores. Construye un dataset propio de **1000 imágenes RGB de Mastcam** (a partir de MSL y MSL-v2) con **5 clases de escena**:
+El artículo construye un dataset propio de **1000 imágenes RGB de Mastcam** (a partir de MSL y MSL-v2) con **5 clases de escena**:
 
 | Clase | Descripción | Muestras |
 |---|---|---|
@@ -78,16 +72,6 @@ El artículo **no** usa las 25 clases anteriores. Construye un dataset propio de
 - Si una imagen encaja en varias clases, manda esta prioridad: `Invalid > Artifacts > Rover_tracks > Rocks > Regolith`.
 - Según el texto, las imágenes se ordenan por sol: el último 20 % de los soles forma validación y el 80 % anterior, entrenamiento (división 8:2 sin soles compartidos).
 
-### 2.3 Dataset del artículo descargado: `data/`
-
-Descargado de Zenodo (https://zenodo.org/records/20828875). **Solo se usan los datos.** Los modelos y el entrenamiento se implementan desde cero en este proyecto, sin partir del código de los autores.
-
-```
-data/
-├── train/{artifacts,invalid,regolith,rocks,rover_tracks}/   # 799 imágenes
-└── val/{artifacts,invalid,regolith,rocks,rover_tracks}/     # 201 imágenes
-```
-
 | Clase | train | val |
 |---|---|---|
 | artifacts | 155 | 38 |
@@ -98,13 +82,10 @@ data/
 
 - Todas las imágenes son JPG RGB de 560×500 px, de Mastcam Left (528) y Right (472).
 - El sol está en el nombre de archivo, justo antes de `ML`/`MR`. Por ejemplo, `1000_1000MR0044630120503572E01_DXXX.jpg` es del sol 1000. Casi siempre son 4 dígitos con ceros a la izquierda, pero **hay 2 archivos con 3** (`cr_492_492ML…`, en `train/invalid`). Algunos nombres llevan el prefijo `cr_`.
-- **La partición publicada no coincide con lo que describe el artículo.** Train cubre los soles 3–1983 y val los soles 77–2231, y **46 soles aparecen en ambos splits**. No es una división cronológica "último 20 % de soles" ni está libre de solapamiento.
-  - Para comparar con las tablas del artículo hay que usar la partición tal cual.
-  - Como experimento adicional se puede rehacer una partición cronológica real y medir cuánto cambian los resultados.
 
 ### 2.4 Decisión
 
-Se trabaja con el dataset de 5 clases de `data/` para que los resultados sean comparables con el artículo. `msl-images/` (25 clases) queda como recurso secundario, por ejemplo para preentrenamiento o pruebas de generalización.
+Se trabaja con el dataset de 5 clases de `data/` para que los resultados sean comparables con el artículo. 
 
 **Partición propia train / val / test (más realista que la del artículo).** El artículo solo tiene train y val, y usa val tanto para elegir el checkpoint como para informar los resultados, lo que da resultados optimistas. Este proyecto:
 - junta las 1000 imágenes y crea **tres splits sin soles compartidos**, en orden cronológico si el reparto de clases lo permite (en otro caso, con `StratifiedGroupKFold` agrupando por sol);
@@ -182,7 +163,6 @@ Meta-aprendizaje (1-shot / 5-shot): FOMAML 0.898 / 0.892, Reptile 0.855 / 0.872,
 - **Pesos del SE con el backbone congelado:** el artículo dice que los módulos SE quedan fijos si el backbone está congelado. Si se insertan en una ResNet50 de ImageNet, esos pesos serían aleatorios. Lo razonable es partir de una SE-ResNet50 ya preentrenada (p. ej. `seresnet50` de `timm`) o dejar los SE entrenables. Hay que documentar la opción elegida.
 - **Qué parámetros adapta MAML** en el bucle interno (toda la red o solo la cabeza): no se especifica, y afecta mucho a la memoria y al tiempo de entrenamiento.
 - **"Sin derivadas de segundo orden explícitas" pero "conservando el grafo completo":** la descripción es contradictoria. FOMAML aparece como método distinto, así que lo más probable es que se refiera a MAML de segundo orden (`create_graph=True`).
-- **Pequeñas incoherencias numéricas:** la caída de accuracy aparece como 5.47 % en un sitio y 5.51 % en otro.
 
 ---
 
